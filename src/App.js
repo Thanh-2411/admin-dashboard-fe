@@ -504,15 +504,12 @@ const deleteCourseFromAPI = async (courseId) => {
   }
 };
 
-// API để lấy danh sách tất cả bài học
 const fetchLessonsFromAPI = async () => {
   try {
     const response = await fetch(`http://localhost:8080/lesson/getAll`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        // Nếu backend yêu cầu token, hãy thêm vào đây
-        // 'Authorization': 'Bearer your-token-here',
       },
     });
 
@@ -521,13 +518,14 @@ const fetchLessonsFromAPI = async () => {
     }
 
     const data = await response.json();
-    console.log('Dữ liệu từ API fetchLessonsFromAPI:', data); // Ghi log để kiểm tra
+    console.log('Dữ liệu từ API fetchLessonsFromAPI:', data);
 
-    // Kiểm tra định dạng dữ liệu
-    if (Array.isArray(data)) {
-      return data;
-    } else if (data && Array.isArray(data.data)) {
-      return data.data; // Trường hợp API trả về { data: [...] }
+    if (data && Array.isArray(data.data)) {
+      return data.data.map(lesson => ({
+        ...lesson,
+        lessonLink: lesson.LessonLink,
+        LessonLink: undefined,
+      }));
     } else {
       throw new Error('Dữ liệu từ API không phải là mảng');
     }
@@ -537,110 +535,125 @@ const fetchLessonsFromAPI = async () => {
   }
 };
 
-// API để tạo bài học mới
 const createLessonFromAPI = async (lessonData) => {
   try {
+    if (!lessonData.courseId || !lessonData.title || !lessonData.lessonLink) {
+      throw new Error('courseId, title và lessonLink là bắt buộc');
+    }
+
     const response = await fetch(`http://localhost:8080/lesson/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Nếu backend yêu cầu token, hãy thêm vào đây
-        // 'Authorization': 'Bearer your-token-here',
       },
       body: JSON.stringify({
         courseId: lessonData.courseId,
         title: lessonData.title,
-        link: lessonData.link,
+        lessonLink: lessonData.lessonLink,
         linkImg: lessonData.linkImg || null,
         description: lessonData.description || null,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Lỗi khi tạo bài học: ${response.status} ${response.statusText}`);
+      const errorData = await response.json();
+      throw new Error(`Lỗi khi tạo bài học: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
-    console.log('Dữ liệu từ API createLessonFromAPI:', data); // Ghi log để kiểm tra
+    console.log('Dữ liệu từ API createLessonFromAPI:', data);
 
-    // Kiểm tra định dạng dữ liệu
     if (data && data.data) {
-      return data.data; // Trả về message hoặc dữ liệu từ server
+      return data.data;
     } else {
       throw new Error('Dữ liệu từ API không hợp lệ');
     }
   } catch (error) {
     console.error('Lỗi createLessonFromAPI:', error);
-    throw new Error('Không thể tạo bài học');
+    throw error;
   }
 };
 
-// API để xóa bài học
 const deleteLessonsFromAPI = async (ids) => {
   try {
     const response = await fetch(`http://localhost:8080/lesson/delete/${ids.join(',')}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        // Nếu backend yêu cầu token, hãy thêm vào đây
-        // 'Authorization': 'Bearer your-token-here',
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Lỗi khi xóa bài học: ${response.status} ${response.statusText}`);
+      const errorData = await response.json();
+      throw new Error(`Lỗi khi xóa bài học: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
-    console.log('Dữ liệu từ API deleteLessonsFromAPI:', data); // Ghi log để kiểm tra
+    console.log('Dữ liệu từ API deleteLessonsFromAPI:', data);
 
-    // Kiểm tra định dạng dữ liệu
     if (data && data.data) {
-      return data.data; // Trả về message từ server
+      return data.data;
     } else {
       throw new Error('Dữ liệu từ API không hợp lệ');
     }
   } catch (error) {
     console.error('Lỗi deleteLessonsFromAPI:', error);
-    throw new Error('Không thể xóa bài học');
+    throw error;
   }
 };
 
-// API để cập nhật bài học
 const updateLessonFromAPI = async (lessonId, lessonData) => {
   try {
+    // Log dữ liệu gửi đi để debug
+    console.log('Dữ liệu gửi trong updateLessonFromAPI:', JSON.stringify(lessonData));
+
+    // Kiểm tra các trường bắt buộc, bao gồm chuỗi rỗng
+    if (!lessonData.courseId || !lessonData.title || !lessonData.lessonLink || lessonData.lessonLink.trim() === '') {
+      throw new Error('courseId, title và lessonLink là bắt buộc và lessonLink không được để trống');
+    }
+
     const response = await fetch(`http://localhost:8080/lesson/update/${lessonId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        // Nếu backend yêu cầu token, hãy thêm vào đây
-        // 'Authorization': 'Bearer your-token-here',
       },
       body: JSON.stringify({
         courseId: lessonData.courseId,
         title: lessonData.title,
-        link: lessonData.Lessonlink,
+        lessonLink: lessonData.lessonLink,
         linkImg: lessonData.linkImg || null,
         description: lessonData.description || null,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Lỗi khi cập nhật bài học: ${response.status} ${response.statusText}`);
+      const errorData = await response.json();
+      console.error('Phản hồi lỗi từ server:', errorData);
+      throw new Error(`Lỗi khi cập nhật bài học: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
-    console.log('Dữ liệu từ API updateLessonFromAPI:', data); // Ghi log để kiểm tra
+    console.log('Dữ liệu từ API updateLessonFromAPI:', data);
 
-    // Kiểm tra định dạng dữ liệu
     if (data && data.data) {
-      return data.data; // Trả về message từ server
+      return data.data;
     } else {
       throw new Error('Dữ liệu từ API không hợp lệ');
     }
   } catch (error) {
     console.error('Lỗi updateLessonFromAPI:', error);
-    throw new Error('Không thể cập nhật bài học');
+    throw error;
+  }
+};
+
+const saveLesson = async (lessonId, lessonData) => {
+  try {
+    const result = await updateLessonFromAPI(lessonId, lessonData);
+    console.log('Cập nhật bài học thành công:', result);
+    return result;
+  } catch (error) {
+    console.error('Lỗi khi lưu bài học:', error);
+    throw error;
   }
 };
 
@@ -661,7 +674,11 @@ const fetchLessonsByCourseId = async (courseId) => {
     console.log('Dữ liệu từ API fetchLessonsByCourseId:', data);
 
     if (Array.isArray(data.data)) {
-      return data.data;
+      return data.data.map(lesson => ({
+        ...lesson,
+        lessonLink: lesson.LessonLink,
+        LessonLink: undefined,
+      }));
     } else {
       throw new Error('Dữ liệu từ API không phải là mảng');
     }
@@ -3029,36 +3046,37 @@ function LessonManager({ setNotifications }) {
   };
 
   const saveLesson = async () => {
-    if (!newLesson.title || !newLesson.link) {
+    // Kiểm tra các trường bắt buộc
+    if (!newLesson.title || !newLesson.link || newLesson.link.trim() === '') {
       setErrorMessage('Vui lòng điền đầy đủ các trường bắt buộc (Tiêu đề, Link)!');
       return;
     }
-
+  
     if (!newLesson.courseId) {
       setErrorMessage('Không tìm thấy khóa học. Vui lòng quay lại danh sách khóa học.');
       return;
     }
-
+  
     if (isNaN(parseInt(newLesson.courseId))) {
       setErrorMessage('ID khóa học không hợp lệ.');
       return;
     }
-
+  
     setLoading(true);
     try {
       const lessonToSave = {
         courseId: parseInt(newLesson.courseId),
         title: newLesson.title,
-        link: newLesson.link,
+        link: newLesson.link, // Đảm bảo link không rỗng
         linkImg: newLesson.linkImg || null,
         description: newLesson.description || null,
       };
-
+  
       let savedLesson;
       if (editLessonId) {
         const message = await updateLessonFromAPI(editLessonId, lessonToSave);
-        // Cập nhật danh sách bài học với dữ liệu mới từ state (vì backend trả về chuỗi)
-        setLessons(lessons.map(lesson => 
+        // Cập nhật danh sách bài học với dữ liệu mới từ state
+        setLessons(lessons.map(lesson =>
           lesson.id === editLessonId ? { ...lesson, ...lessonToSave } : lesson
         ));
         setNotifications(prev => [
@@ -3073,7 +3091,7 @@ function LessonManager({ setNotifications }) {
           { message: `Bài học ${newLesson.title} đã được thêm.`, timestamp: new Date().toISOString(), isRead: false }
         ]);
       }
-
+  
       setNewLesson({
         courseId: courseId,
         title: '',
@@ -4215,17 +4233,25 @@ function Members({ memberTab, setMemberTab }) {
 
   // Render avatar with fallback for 404 errors
   const renderAvatar = (avatar, name) => {
-    const defaultAvatar = 'https://via.placeholder.com/40';
+    const defaultAvatar = 'https://placekitten.com/40/40'; // Sử dụng một URL thay thế hoặc hình ảnh khác
+  
+    // Nếu avatar có sẵn, hiển thị nó, nếu không, hiển thị placeholder
     if (avatar) {
       return (
         <img
           src={avatar}
           alt="Avatar"
           className="avatar-img"
-          onError={(e) => (e.target.src = defaultAvatar)}
+          onError={(e) => {
+            // Khi có lỗi tải hình ảnh, thay thế nó bằng defaultAvatar
+            e.target.onerror = null; // Ngừng cố gắng tải lại
+            e.target.src = defaultAvatar;
+          }}
         />
       );
     }
+  
+    // Nếu không có avatar, hiển thị chữ cái đầu tiên của tên
     const initial = name ? name.charAt(0).toUpperCase() : '?';
     return (
       <div className="avatar-placeholder">
@@ -4233,6 +4259,7 @@ function Members({ memberTab, setMemberTab }) {
       </div>
     );
   };
+  
 
   return (
     <>
